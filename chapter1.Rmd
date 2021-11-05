@@ -9,5 +9,18 @@
 date()
 
 ```
-The text continues here.
 
+
+## My view
+***
+
+### Myself
+My name is __Dongming Zhang__, I am a doctoral student at University of Helsinki. My project is working on the genetic study of fungi, such as _Aspergillus niger_, _Trichoderma reesei_.
+
+
+### Study goals
+To be honest, I have the experiences about R, Python, Matlab. But I am not a professional statistics student, my programming ability is limited within how to run the scripts, writing some simple functions Many of programming questions or underlined problems that I did not understand clearly. My supervisor -- from department of Microbiology-- introduced this amazing course for me. Thus, I would like to study the detailed knowledge about R in this course. In my project, I can proficiently use R to analyze my bioinformatic data.
+
+
+### My Github (Click the link)
+[link](https://github.com/DongmingZhang706/IODS-project.git)

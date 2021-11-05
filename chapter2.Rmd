@@ -1,4 +1,4 @@
-# Insert chapter 2 title here
+# Looking at Data
 
 *Describe the work you have done this week and summarize your learning.*
 
@@ -10,4 +10,30 @@
 date()
 ```
 
-Here we go again...
+## Open data science
+***
+
+1. Installation of R, RStudio and Git
+    + I used to run RStudio and Git on MAC, this is my first time to use these software on my Windows pc. It is also really convenient to run them on windows.
+    + In RStudio, it is also easy to run Git through the user interference on RStudio.
+
+
+2. Familiar with R-Markdown and Git
+    + Learned the syntax of R-Markdown and how to commit/push files on Github
+
+
+3. DataCamp
+    + Finished the part 1 and part 2 in DataCamp
+    + Understanding the basic syntax of R, such as *str(), subset(), function()*
+
+
+## My project
+***
+
+* Literature review on the filamentous fungi.
+* Presentation of the sugar transporters in fungi.
+* Continuing the search of candidate sugar transporters that can be expressed in yeast strain like *Saccharomyzes cerevisiae*
+
+
+
+
