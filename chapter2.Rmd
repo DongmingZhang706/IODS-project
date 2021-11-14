@@ -1,4 +1,4 @@
-# Looking at Data
+# Regression and model validation (week 2)
 
 *Describe the work you have done this week and summarize your learning.*
 
@@ -10,30 +10,65 @@
 date()
 ```
 
-## Open data science
-***
+## Read data
 
-1. Installation of R, RStudio and Git
-    + I used to run RStudio and Git on MAC, this is my first time to use these software on my Windows pc. It is also really convenient to run them on windows.
-    + In RStudio, it is also easy to run Git through the user interference on RStudio.
+```{r}
+students2014 <- read.table("./data/learning2014.txt", sep=",", header=TRUE)
+
+str(students2014)
+
+dim(students2014)
+```
+
+This data is a survey result on teaching and learning. Data was collected on 2014, including the infromation of participants, such as 'gender', 'age', 'attitude'. In dataset, 'deep' is the mean points of students to answer the 12 deep questions, 'stra' is the mean points of students to answer the 12 strategic questions, 'suf' is the mean points of students to answer the 12 surface questions. 'points' are the exam grades of students. This data frame has 166 observations and 7 variables.
+
+## A graphical overview
+
+```{r}
+library(ggplot2)
+library(GGally)
+
+```
+
+```{r}
+pairs(students2014[-1], col = students2014$gender)
+```
+
+```{r}
+ggpairs(students2014,  lower = list(combo = wrap("facethist", bins = 20)))
 
 
-2. Familiar with R-Markdown and Git
-    + Learned the syntax of R-Markdown and how to commit/push files on Github
+```
+
+The above two figures show the relationships among 7 variables. From the ggpairs plot, it is clear that the significant correlations are tagged with asterisks '*'. All varibles are normally distributed, excepet the 'age', the most people attending to survey are aged between 20 and 30. For 'surf' results, 'attitude', 'deep' and 'stra' have a significant correlations. the absolute value of 'deep' reaches to 0.324, which has the most significant influence to 'surf'. With regarding to 'points', 'attitude' has the highest absolute value, 0.437, and the most significant correlationships with 'points'.
 
 
-3. DataCamp
-    + Finished the part 1 and part 2 in DataCamp
-    + Understanding the basic syntax of R, such as *str(), subset(), function()*
+## A regression model
+
+```{r}
+my_model <- lm(points ~ attitude + stra + surf, data = students2014)
+
+summary(my_model)
+```
+
+In this part, 'attitude', 'stra' and 'surf' are used for linear regression because they are the first three hightest correlation values towards target variable 'points'. From the summary of the model, only 'attitude' has a satistically significant relationship with 'points'. 'stra' and 'surf' are not significantly correlated with 'points'. Additionally, Intercept has a significant influence on the model, which is also the key factor in the model. Meanwhile, multiple R-squared is relatively low, 0.2074, meaning that the model is poorly correlated to the explanatory variables.
+
+## Optimization of model
+
+```{r}
+optimized_model <- lm(points ~ attitude, data = students2014)
+
+summary(optimized_model)
+```
+
+Just using the most significant variable 'attitude' as a explanatory variable in 'optimized_model', the residuals results are not changed too much comparing to the 'my_model' because the most influence factor is 'attitude'. 'attitude' still has the highly significant correlationship with 'points'. Multiple R-squared value is decreased from 0.2074 in 'my_model' to 0.1906 in 'optimized_model', which means the regression model does not fit well to the explanatory variables. Normally, the good Multiple R-squared of a model is over at least 0.7.
+
+## Model validation
+
+```{r}
+par(mfrow = c(2,2))
+plot(optimized_model, which = c(1,2,5))
+```
 
 
-## My project
-***
-
-* Literature review on the filamentous fungi.
-* Presentation of the sugar transporters in fungi.
-* Continuing the search of candidate sugar transporters that can be expressed in yeast strain like *Saccharomyzes cerevisiae*
-
-
-
-
+'optimized_model' is applied for the model validation part to check the model assuptions. The basic properties of errors include that the errors are normally distributed, errors have a constant variance and errors are not correlated. Meanwhile, the size of a given error does not depend on the explanatory variables. According to the top left plot, the constant variance assumption is reasonable. All points are distributed randomly that represents the errors do not related to the explanatory variables. From the Normal Q-Q plot, it is a reasonable fit that the points are close to the fit line, which means the errors of model are normally distributed. Through the leverage of observations, the 'attitude' has a relatively high leverage that many regular errors with an outlier ranging from 0.02 to 0.04 on x-axis. Overall, the assumptions of model are validated well by these processes. However, this model is not good for the prediction of new data, because multiple R-squared values is much lower and few related explanatory variables. The model should be trained by more relevant data for further analysis.
