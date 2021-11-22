@@ -54,7 +54,7 @@ dim(learning2014) # 166,7
 
 # save it to data fold
 
-setwd('data/')
+setwd("//ad.helsinki.fi/home/z/zhangdon/Desktop/Introduction to open data science/IODS-project/data")
 write.csv(learning2014, file = 'learning2014.txt', row.names = FALSE)
 
 # read the txt file for testing

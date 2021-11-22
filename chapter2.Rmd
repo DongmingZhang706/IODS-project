@@ -13,7 +13,7 @@ date()
 ## Read data
 
 ```{r}
-students2014 <- read.table("./data/learning2014.txt", sep=",", header=TRUE)
+students2014 <- read.table("./data/learning2014.txt", sep=",", header=TRUE, stringsAsFactors = T)
 
 str(students2014)
 
@@ -31,7 +31,7 @@ library(GGally)
 ```
 
 ```{r}
-pairs(students2014[-1], col = students2014$gender)
+pairs(students2014[2:7], col = students2014$gender)
 ```
 
 ```{r}

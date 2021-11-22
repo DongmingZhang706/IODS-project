@@ -1,0 +1,221 @@
+# Logistic regression (week 3)
+
+
+
+```{r}
+date()
+```
+
+```{r, results= FALSE}
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(tidyr)
+library(GGally)
+library(boot)
+```
+
+
+## Read data
+
+```{r}
+setwd('//ad.helsinki.fi/home/z/zhangdon/Desktop/Introduction to open data science/IODS-project/data')
+
+alc <- read.table("alc.txt", sep=",", header=TRUE, stringsAsFactors = T)
+
+str(alc)
+
+dim(alc)
+
+print(colnames(alc))
+```
+
+This data is the joint data sets merging Math course with Portuguese language course. To examine the alcohol consumption with other variables, *alc_use* is the average of the workday alcohol consumption and weekend alcohol consumption. *high_use* is **TRUE** when *alc_use* is higher than 2, otherwise is **FALSE**. For some of abbreviation, *famrel* is quality of family relationships, *freetime* is the free time after school, *goout* is going out with friends. Their values are ranging from 1 vary low to 5 very high. *famsup* is the boolean value which represents if the student could get the family educational support.
+
+## Choose the variables
+
+Initially, it is hypothesized that family and entertainment are the key factors, which would impact the alcohol consumption of students. Thus, *famrel*, *famsup* and *freetime*, *goout* are chose for the logistic regression analysis. 
+
+```{r, warning = FALSE, fig.width=15,fig.height=30}
+gather(alc) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar()
+```
+
+From the Key-value pairs result, most of students are aged from 15 to 18 years old. The legal drinking age is usually over 18 in many countries. Those who under 18 years-old consumed much alcohol is largely influenced by their family or their peers.
+
+
+## Exploration of the variables
+
+```{r}
+famrel1 <- ggplot(alc, aes(x = high_use, y = famrel, col = sex)) + geom_boxplot()
+famsup1 <- ggplot(alc, aes(x = high_use, y = famsup, col = sex)) + geom_boxplot()
+freetime1 <- ggplot(alc, aes(x = high_use, y = freetime, col = sex)) + geom_boxplot()
+goout1 <- ggplot(alc, aes(x = high_use, y = goout, col = sex)) + geom_boxplot()
+
+ggarrange(famrel1, famsup1, freetime1, goout1,
+          ncol = 2, nrow = 2)
+```
+
+Observing the family relationships with high_use, most of high_use students also have a good relations with family members. Just looking into the boxplots, boys have more free time than girls so they might like to drink much more. For those who go out with friends more times per week, they are easily drunk much more. Because family educational support is the Boolean values, it is not clear just observing from the box plots.
+
+After the below numerical analysis of selected variables with high alcohol consumption, most of students do not drink too much. Observing the highest number of high used students in these 4 dimensions. 77 of students are high used with 4 degree of family relationship. The number of high used students with family educational support is 66, which is higher than those who without family support, 45. According to free time, the numbers of high used students at 3 and 4 degree are similar, both of them are 40. The highest number of high used student is 38 at 4 degree. However, the highest number of non-high used student is 97 at 3 degree. Only based on these numerical and graphical analysis, it does not conclude any relationships between the variables and alcohol consumption. Therefore, logistic regression should be operated to provide for more information.
+
+```{r, warning = FALSE}
+alc %>% group_by(famrel, high_use) %>% summarise(count = n())
+alc %>% group_by(famsup, high_use) %>% summarise(count = n())
+alc %>% group_by(freetime, high_use) %>% summarise(count = n())
+alc %>% group_by(goout, high_use) %>% summarise(count = n())
+
+```
+
+
+## Logistic regression model
+
+```{r}
+m <- glm(high_use ~ famrel + famsup + freetime + goout, data = alc, family = "binomial")
+
+summary(m)
+
+coef(m)
+```
+
+From the summary results of the model, family relationships and go out times are significantly influence the high alcohol consumption in students. Go out times is the most significant factor, that is 1.9e-09. Family educational support and free time are not significant according to the results. The coefficient values of model is similar to the estimate values from summary function. family relationships and family educational support are minus value (-0.4191 and -0.1899), which means that they are negative associated with the target variable (high alcohol consumption). Whereas free time and go out are the positive associated with target variable, 0.2014 and 0.74005, respectively. 
+
+## Odds ratios and confidence intervals
+
+```{r, warning = FALSE}
+OR <- coef(m) %>% exp
+CI <- confint(m) %>% exp
+cbind(OR, CI)
+```
+
+As known, the odds ratios are calculated from the exponents of the coefficients. Those values are larger than 1 can be considered as the positive associated values, otherwise those less than 1 are negative associated values. For family factors, the better family relationships could reduce the probability of high alcohol consumption by 34.2% (1-0.658), the students without family support have 17.3% (1-0.827) higher odds to consume much more alcohol than students with family educational support. For the entertainment factors, the probability of high alcohol consumption will be increased by 1.223 times with the more free time for student, go out times will grow the probability of high alcohol consumption by 2.097 times. Confidence interval of this model is set by 97.5% for each variables, it can be intercepted by that we are 97.5% confident that variables impact the high alcohol consumption in students.
+
+Then, to examine the exact coefficients of each variables, the intercept in the model has been removed in the below codes. It is definite that family educational support seems to have a significant influence on the highly usage of alcohol of students. However, free time is still not the significant factor in the model. So, free time should be check again if it would have a statistically significance in the model.
+
+```{r}
+m1 <- glm(high_use ~ famrel + famsup + freetime + goout - 1, data = alc, family = "binomial")
+
+summary(m1)
+
+coef(m1)
+```
+
+```{r}
+m2  <- glm(high_use ~ famrel + famsup + goout, data = alc, family = "binomial") 
+m3  <- glm(high_use ~ famrel + freetime +goout, data = alc, family = "binomial")
+
+anova(m, m2, test = 'LRT')
+anova(m, m3, test = 'LRT')
+```
+
+According to the analysis of model with and without free time, the likelihood ratio test is 0.1381, which is not significant to the model. Also, comparing with the models containing family support or not, the likelihood ratio test Free time is 0.4555. Free time and family support are not the significant factors influencing the high alcohol consumption of students. Thus, both of them can be removed from the logistic regression model for increasing the accuracy of prediction. 
+
+## Prediction validation and loss functions
+
+```{r}
+probabilities <- predict(m, type = "response")
+
+alc0 <- mutate(alc, probability = probabilities) %>% mutate(alc, prediction = probabilities > 0.5)
+
+g <- ggplot(alc0, aes(x = probability, y = high_use, col = prediction))
+
+g + geom_point()
+
+```
+
+At first, the initial four variables (family relationships, family educational support, free time and go out) are used for logistic regression and the whole data is used for the predication validation. From the plot, the points of negative false seems larger than negative true. So, the exact prediction results should be examined by the table function.
+
+```{r}
+select(alc0, age, freetime, failures, goout, high_use, probability, prediction) %>% tail(10)
+
+table(high_use = alc0$high_use, prediction = alc0$prediction)
+table(high_use = alc0$high_use, prediction = alc0$prediction) %>% prop.table() %>% addmargins()
+```
+
+As shown by the above two tables, the accuracy of prediction can be computed by (total negative false + total positive true) divided by total number of students. Thankfully, the prop.table function has computed this probability. The accuracy of the model is 0.6405 + 0.1054 equal to 0.7459. It means that the prediction accuracy of this model is 74.59%.
+
+
+```{r}
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+loss_func(class = alc0$high_use, prob = alc0$probability)
+```
+
+Loss function is a easy way for prediction validation. As shown by the above result, loss function is 0.2541, the accuracy is 0.7459 (1-0.2541). The accuracy is consistent with the above handle calculated value from the table results.
+
+From the analysis on the last step, free time is not significant and it can be removed from the logistic regression model here. Additionally, family educational support is not significant either from the Therefore, two variables (family relationships and go out) are used for the modelling and the whole data is used for prediction validation.
+
+```{r}
+m4  <- glm(high_use ~ famrel + goout, data = alc, family = "binomial")
+
+probabilities1 <- predict(m4, type = "response")
+
+alc1 <- mutate(alc, probability = probabilities1) %>% mutate(alc, prediction = probabilities1 > 0.5)
+
+loss_func(class = alc1$high_use, prob = alc1$probability)
+```
+
+As we see, the loss of the model (**m4**) is decreased compared to the model with all four variables (**m**), from 0.2541 to 0.2432. The accuracy of the model prediction is increased by selecting the significant factors.
+
+
+## Cross validation
+
+```{r}
+loss_func(class = alc1$high_use, prob = alc1$probability)
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = m4, K = 10)
+cv$delta[1]
+```
+
+After cross validation, the model using 10-fold cross-validation seems not perform better than the model not using cross validation. From the values, the prediction accuracy is always larger than the loss of the initial model after cross validation. Because the data is divided into 10 parts for training and testing, the accuracy value is much reasonable by cross validation although it is relatively higher.
+
+```{r} 
+crossvalidation <- function(model){
+  cv <- cv.glm(data = alc, cost = loss_func, glmfit = model, K = 10)
+  cv$delta[1]
+}
+
+
+accuracy <- sapply(1:100, function(n)crossvalidation(m4))
+
+accuracy
+```
+
+```{r}
+v <- data.frame(accuracy)
+ggplot(v, aes(x = as.numeric(row.names(v)), y = accuracy, group = as.numeric(row.names(v)))) + 
+  geom_point(aes(color = ifelse(accuracy>0.2432432, 'red', 'blue'))) + 
+  scale_colour_manual(labels = c("<0.2432432", ">0.2432432"), values=c('red', 'blue')) +
+  labs(color = "Values") +labs(x = 'cycles of cross validation', y = 'Loss of models')
+```
+
+Running 100 cycles of cross validation for model, there are few values of cross validation are less than loss function value of the whole data validation. However, it demonstrates that the predication accuracy by cross validation is at a range of scale due to the random separation of training and testing parts.
+
+To examine the trend about different numbers of predictors in the model. The ten variables are selected randomly and then change to only one variable for the logistic regression model. The cross validation results are calculated based on the different numbers of variables.
+
+```{r}
+# generate the models with different numbers of predictors
+mm10 <- glm(high_use ~ famrel + famsup + freetime + goout + sex + age + higher + absences + failures + activities, data = alc, family = "binomial") 
+mm9 <- glm(high_use ~ famrel + famsup + freetime + goout + sex + age + higher + absences + failures, data = alc, family = "binomial") 
+mm8 <- glm(high_use ~ famrel + famsup + freetime + goout + sex + age + higher + absences, data = alc, family = "binomial") 
+mm7 <- glm(high_use ~ famrel + famsup + freetime + goout + sex + age + higher, data = alc, family = "binomial") 
+mm6 <- glm(high_use ~ famrel + famsup + freetime + goout + sex + age, data = alc, family = "binomial") 
+mm5 <- glm(high_use ~ famrel + famsup + freetime + goout + sex, data = alc, family = "binomial") 
+mm4 <- glm(high_use ~ famrel + famsup + freetime + goout, data = alc, family = "binomial") 
+mm3 <- glm(high_use ~ famrel + famsup + freetime, data = alc, family = "binomial") 
+mm2 <- glm(high_use ~ famrel + famsup, data = alc, family = "binomial") 
+mm1 <- glm(high_use ~ famrel, data = alc, family = "binomial")
+
+cv10 <- c(crossvalidation(mm10), crossvalidation(mm9), crossvalidation(mm8), crossvalidation(mm7), crossvalidation(mm6), crossvalidation(mm5), crossvalidation(mm4), crossvalidation(mm3), crossvalidation(mm2), crossvalidation(mm1))
+
+No_predictor <- 10:1
+
+supur_bonus <- data.frame(No_predictor, cv10)
+
+ggplot(supur_bonus, aes(x = No_predictor, y = cv10)) + geom_line() + labs(x = 'Numbers of predictors', y = 'Loss of models') + xlim(10.5, 0.5)
+
+```
+
+According to the above trend analysis, the few predictors, the higher loss of models. So the accuracy of the prediction depends on the numbers of variables in the model. However, more variables do not mean the better prediction accuracy, other insignificant predictors could decrease the accuracy of the logistic regression model. Searching all significant variables for the logistic regression model would be generate the most accurate prediction.
