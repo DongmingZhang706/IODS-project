@@ -1,0 +1,211 @@
+# Clustering and classification (week 4)
+
+
+
+```{r}
+date()
+```
+
+
+```{r}
+library(MASS)
+library(corrplot)
+library(tidyr)
+library(PerformanceAnalytics)
+library(GGally)
+library(plotly)
+```
+
+## Load the Boston data
+
+```{r}
+data('Boston')
+```
+
+The data **Boston** has 506 observations and 14 variables, which is the survey about housing value in suburbs of Boston. *crim* means per capita crime rate by town; *zn* is the proportion of residential land zoned for lots over 25,000 sq.ft; *indus* is the proportion of non-retail business acres per town. The details of the description can be found on the **MASS** website (click here)[https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/Boston.html].
+
+## Overview of the data
+
+```{r}
+cor_matrix<-cor(Boston) %>% round(digits = 2)
+corrplot(cor_matrix, method="circle", type="upper", cl.pos="b", tl.pos="d", tl.cex = 0.6)
+chart.Correlation(Boston, histogram=TRUE, pch=19)
+```
+
+As shown on the above two figures, the correlations that the p-value > 0.01 are considered as significant. The cycles in the first one represent the significant values between two variables. Insignificant ones are shown as the blank. The blue cycles are positive correlations and red color symbols are the negative correlations. From the results of the second figure, most of variables are significant correlations with each other except *chas* which means Charles River dummy variable. *chas* does not impact other variables according to correlation matrix.
+
+```{r}
+summary(Boston)
+```
+
+From the summary, the values are varies based on their judgement. For example, the crime rate is ranging from 0.00632 to 88.97620, whereas *rm* (average number of rooms per dwelling) has a narrow range, from 3.561 to 8.780. *tax* has the relatively large values compared to other variables. Thus, it is necessary to standardize the whole data.
+
+## Standardization of the data
+
+```{r}
+boston_scaled <- scale(Boston)
+print(summary(boston_scaled))
+```
+
+Standardization is the important step for the data clustering, $scaled(x) = \frac{x - mean(x)}{sd(x)}$. After scaling, the whole data is grouped into a small range of scale, which prevents some variables with larger scales from overweight the other variables. 
+
+## Speration of training and testing data for crime rate
+
+```{r}
+# creating a categorical variable of the crime rate
+boston_scaled <- as.data.frame(boston_scaled)
+bins <- quantile(boston_scaled$crim)
+crime <- cut(boston_scaled$crim, breaks = bins, include.lowest = TRUE, labels = c("low", "med_low", "med_high", "high"))
+table(crime)
+
+# removing the old crime rate variable and adding the new quantile of 'crime' variable
+boston_scaled <- dplyr::select(boston_scaled, -crim)
+boston_scaled <- data.frame(boston_scaled, crime)
+
+# dividing the data into training and testing group
+n <- nrow(boston_scaled)
+ind <- sample(n,  size = n * 0.8)
+train <- boston_scaled[ind,]
+test <- boston_scaled[-ind,]
+
+```
+## Linear discriminant analysis
+
+```{r}
+lda.fit <- lda(crime ~ . , data = train)
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+classes <- as.numeric(train$crime)
+
+plot(lda.fit, dimen = 2, col = classes, pch = classes)
+lda.arrows(lda.fit, myscale = 2)
+```
+
+From the liner discriminant analysis plot, the high crime rate group is separated from the low crime rate and most of mediate high crime rate groups. *rad* (index of accessibility to radial highways) is more discrimination, which has a larger standard deviation than other variables. The angles between arrows represent the relationships between them. There are 14 variables in training data, so it is hard to distinguish the differences among them. However, it can be concluded that most of variables are correlated with each other.
+
+## Prediction of the LDA model
+
+```{r}
+correct_classes <- test$crime
+test <- dplyr::select(test, -crime)
+str(test)
+
+lda.pred <- predict(lda.fit, newdata = test)
+table(correct = correct_classes, predicted = lda.pred$class) %>% prop.table() %>% addmargins()
+```
+
+According to the prediction results, the accuracy of the model is 0.657 (0.147 + 0.127 + 0.118 + 0.265).
+
+## Distance measures and k-means clustering
+
+```{r}
+
+data('Boston')
+
+re_scaled <- data.frame(scale(Boston))
+
+dist_eu <- dist(re_scaled)
+
+summary(dist_eu)
+```
+
+Because euclidean distance is the common and popular way to calculate the variable distances, which is applied for here. After distance measurement of the scaled variables, the minim distance is 0.1343 while the maxim one is 14.370. The median and mean distances are 4.8241 and 4.9111, respectively.
+
+```{r}
+# determining the numbers of K-means
+set.seed(123)
+k_max <- 10
+twcss <- sapply(1:k_max, function(k){kmeans(re_scaled, k)$tot.withinss})
+
+# visualize the results
+qplot(x = 1:k_max, y = twcss, geom = 'line')
+```
+
+Through the visualization of the trend of K numbers, it drops radically when k is 3. Thus, k number is selected as 3 for k-means clustering.
+
+
+```{r}
+# choosing k = 3
+km <-kmeans(re_scaled, centers = 3)
+cluster <- as.factor(km$cluster)
+ggpairs(re_scaled, aes(colour = cluster, alpha = 0.4), 
+columns = colnames(re_scaled),
+upper = "blank",
+diag = NULL)
+
+```
+
+There are three different colors in the plot due to K number is 3. For most of clusters, the data can be clustered into 3 separated groups. However, 3 centers are not clear in some figures, such as *tax* vs *age* and *ptratio* vs *age*.
+
+## Bonus
+
+```{r}
+set.seed(123)
+k_max <- 10
+twcss <- sapply(1:k_max, function(k){kmeans(Boston, k)$tot.withinss})
+
+# visualize the results
+qplot(x = 1:k_max, y = twcss, geom = 'line')
+```
+
+If directly using **Boston** data to find the optimized number of K. According to the plot, the trend becomes relatively stable after k is 3.
+
+```{r, fig.height=9, fig.width=12}
+# choose k number and create a dataset with cluster
+km <-kmeans(Boston, centers = 3)
+
+newboston <- Boston
+
+newscaled <- scale(newboston)
+newscaled <- data.frame(newscaled)
+
+newscaled$cluster <- km$cluster
+
+# create the training and testing data
+n <- nrow(newscaled)
+
+ind <- sample(n,  size = n * 0.8)
+
+train1 <- newscaled[ind,]
+
+test1 <- newscaled[-ind,]
+
+correct_classes <- test1$cluster
+
+test1 <- dplyr::select(test1, -cluster)
+
+# lda analysis
+lda.fit <- lda(cluster ~ . , data = train1)
+newclass <- as.numeric(train1$cluster)
+plot(lda.fit, dimen = 2, col = newclass, pch = newclass)
+lda.arrows(lda.fit, myscale = 1)
+
+```
+
+On the above figure, three different groups of clusters are separated clearly. *tax* and *rad* have the long arrows which means that they are the most influential linear separator for the clusters.
+
+## Super-Bonus
+
+```{r}
+model_predictors <- dplyr::select(train, -crime)
+lda.fit <- lda(crime ~ . , data = train)
+km <-kmeans(model_predictors, centers = 3)
+
+dim(model_predictors)
+dim(lda.fit$scaling)
+
+matrix_product <- as.matrix(model_predictors) %*% lda.fit$scaling
+matrix_product <- as.data.frame(matrix_product)
+
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color = train$crime)
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color = km$cluster)
+```
+
+From the two plots, there are two clear clusters which are separated from each other. When using crime as the indicator, the group of high crime rate is clustered with few cases of mediate high crime rate. Most of mediate high crime rate with other groups are clustered together. It means the reasons causing high crime rate are different from other types of crime rates. Because K number is selected as 3 based on the previous optimization analysis of K-numbers, the model is easily clustered to 3 different groups according to their correlations. However, some of points seeming closer to K-1 and K-2 groups are statistically related to K-3 closer.
